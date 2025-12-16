@@ -1,13 +1,3 @@
-import random
-
-def diceRoll():
-    input = input("Roll the dice! Press any keys!")
-    if input:
-        dice_one = random.randint(1,6)
-        dice_two = random.randint(1,6)
-        print(f"You rolled {dice_one} and {dice_two}, a total of {dice_one + dice_two}!")
-        return dice_one + dice_two
-
 class Player:
     def __init__(self, name): # Attributes for the player object
         self.name = name
@@ -29,19 +19,19 @@ class Property:
 
 class Railroad(Property):
     def __init__(self, name, price, rent=25, house_cost=0, colour=None):
-        super().__init__(name, price)
+        super().__init__(name, price, rent=25, house_cost=0, colour=None)
 
     def railroad_rent(self): # Rent must be calculated as it works differently
         if self.owner is None:
             return 0
-        railroads_owned =  sum(isinstance(p, Railroad) for p in self.owner.properties)
+        railroads_owned = sum(isinstance(p, Railroad) for p in self.owner.properties)
         if railroads_owned == 0:
             return 25
         else:
             return 25 * (2**(railroads_owned - 1))
 
 class Utility(Property):
-    def __init__(self, name, price):
+    def __init__(self, name, price, rent=25, house_cost=0, colour=None):
         super().__init__(name, price, rent=25, house_cost=0, colour=None)
 
     def utility_rent(self, dice_total):
@@ -84,20 +74,21 @@ properties_list = [
     {"name": "Park Lane", "colour": "Dark Blue", "price": 350, "rent": [35, 175, 500, 1100, 1300, 1500], "house_cost": 200},
     {"name": "Mayfair", "colour": "Dark Blue", "price": 400, "rent": [50, 200, 600, 1400, 1700, 2000], "house_cost": 200}
 ]
+properties_objects = []
 for property in properties_list:
-    properties_list = []
-    properties_list.append(Property(name=properties_list["name"], price=properties_list["price"], rent=properties_list["rent"], house_cost=properties_list["house_cost"], colour=properties_list["colour"]))
+    properties_objects.append(Property(name=property["name"], price=property["price"], rent=property["rent"], house_cost=property["house_cost"], colour=property["colour"]))
     
 
 utilities_list = [
     {"name": "Electric Company", "price": 150},
     {"name": "Water Works", "price": 150}
 ]
-
+utility_objects = []
+for utility in utilities_list:
+    utilities_objects.append(Utility(name=properties_list["name"], price=utilities_list["price"]))
 railroads_list = [
     {"name": "King's Cross Station", "price": 200},
     {"name": "Marylebone Station", "price": 200},
     {"name": "Fenchurch St Station", "price": 200},
     {"name": "Liverpool St Station", "price": 200}
 ]
-
