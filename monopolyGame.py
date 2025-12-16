@@ -6,6 +6,17 @@ class Player:
         self.in_jail = False
         self.turns_in_jail = 0
         self.properties = []
+        self.bankruptcy = False
+
+class Bank:
+    def transaction(self, sender, amount, receiver=None):
+        sender.money -= amount
+        if receiver is not None:
+            receiver.money += amount
+        
+    def is_bankrupt(self, player):
+        if player.money < 0:
+            player.bankruptcy = True
 
 class Tile:
     def __init__(self, name): # Highest class in the inheritance hirearchy, non ownable tiles can inherit from this
@@ -21,17 +32,28 @@ class Tile_Ownable(Tile): # Inherits from tile and ownable tiles can inherit fro
         self.owner = None
     
     def landed_on(self, player):
-        pass
-    
+        print(f"{player.name} has landed on {self.name}")
+        if self.owner is None:
+            buy = input(f"{self.name} is unowned. Would you like to buy it for {self.price}? (y/n)")
+            if buy == "y":
+                Bank.transaction(player, self.price)
+                self.owner = player
+                print(f"{player.name} has bought {self.name} for {self.price}!")
+
+
 class Property(Tile_Ownable): # Property, automatically inerhits owner and isn't needed to call it again
     def __init__(self, name, price, rent, house_cost, colour):
         super().__init__(name, price)
         self.rent = rent
         self.house_cost = house_cost
         self.colour = colour
+        self.house_number = 0
 
     def landed_on(self, player):
-        pass
+        super().landed_on(player)
+        if self.owner is not None and self.owner != player:
+            print(f"{player} has landed on the property of {self.owner}, therefore must pay them ${self.rent[self.house_number]}")
+            Bank.transaction(player, self.rent[self.house_number], self.owner)
 
 class Railroad(Tile_Ownable): # No need for a __init__ function since it inherits everything it needs
     def railroad_rent(self): # Rent must be calculated relative to how many railroads owned
@@ -58,30 +80,46 @@ class Utility(Tile_Ownable):
         pass
 
 class Chance(Tile):
+    def __init__(self):
+        super().__init__("Chance")
     def landed_on(self, player):
         pass
 
 class Community(Tile):
+    def __init__(self):
+        super().__init__("Community Chest")
     def landed_on(self, player):
         pass
 
 class Go(Tile):
+    def __init__(self):
+        super().__init__("Go")
     def landed_on(self, player):
         pass
 
 class Jail(Tile):
+    def __init__(self):
+        super().__init__("Jail")
     def landed_on(self, player):
         pass
 
 class Go_Jail(Tile):
+    def __init__(self):
+        super().__init__("Go to jail")
     def landed_on(self, player):
         pass
 
 class Parking(Tile):
+    def __init__(self):
+        super().__init__("Free Parking")
     def landed_on(self, player):
         pass
 
 class Tax(Tile):
+    def __init__(self, name, amount):
+        super().__init__(name)
+        self.amount = amount
+
     def landed_on(self, player):
         pass
 
@@ -137,3 +175,46 @@ railroads_list = [
 railroads_objects = []
 for rr in railroads_list:
     railroads_objects.append(Railroad(name=rr["name"], price=rr["price"]))
+
+board = [
+    Go(),
+    properties_objects[0],
+    Community(),
+    properties_objects[1],
+    Tax(name="Income Tax", amount=200),
+    railroads_objects[0],
+    properties_objects[2],
+    Chance(),
+    properties_objects[3],
+    properties_objects[4],
+    Jail(),
+    properties_objects[5],
+    utilities_objects[0],
+    properties_objects[6],
+    properties_objects[7],
+    railroads_objects[1],
+    properties_objects[8],
+    Community(),
+    properties_objects[9],
+    properties_objects[10],
+    Parking(),
+    properties_objects[11],
+    Chance(),
+    properties_objects[12],
+    properties_objects[13],
+    railroads_objects[2],
+    properties_objects[14],
+    properties_objects[15],
+    utilities_objects[1],
+    properties_objects[16],
+    Go_Jail(),
+    properties_objects[17],
+    properties_objects[18],
+    Community(),
+    properties_objects[19],
+    railroads_objects[3],
+    Chance(),
+    properties_objects[20],
+    Tax(name="Super Tax", amount=100),
+    properties_objects[21]
+]
