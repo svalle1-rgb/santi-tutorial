@@ -7,21 +7,34 @@ class Player:
         self.turns_in_jail = 0
         self.properties = []
 
-class Property:
-    def __init__(self, name, price, rent, house_cost, colour):
+class Tile:
+    def __init__(self, name): # Highest class in the inheritance hirearchy, non ownable tiles can inherit from this
         self.name = name
+    
+    def landed_on(self, player):
+        pass
+
+class Tile_Ownable(Tile): # Inherits from tile and ownable tiles can inherit from this
+    def __init__(self, name, price):
+        super().__init__(name)
         self.price = price
+        self.owner = None
+    
+    def landed_on(self, player):
+        pass
+    
+class Property(Tile_Ownable): # Property, automatically inerhits owner and isn't needed to call it again
+    def __init__(self, name, price, rent, house_cost, colour):
+        super().__init__(name, price)
         self.rent = rent
         self.house_cost = house_cost
-        self.house_num = 0
-        self.owner = None
         self.colour = colour
 
-class Railroad(Property):
-    def __init__(self, name, price, rent=25, house_cost=0, colour=None):
-        super().__init__(name, price, rent=25, house_cost=0, colour=None)
+    def landed_on(self, player):
+        pass
 
-    def railroad_rent(self): # Rent must be calculated as it works differently
+class Railroad(Tile_Ownable): # No need for a __init__ function since it inherits everything it needs
+    def railroad_rent(self): # Rent must be calculated relative to how many railroads owned
         if self.owner is None:
             return 0
         railroads_owned = sum(isinstance(p, Railroad) for p in self.owner.properties)
@@ -29,19 +42,48 @@ class Railroad(Property):
             return 25
         else:
             return 25 * (2**(railroads_owned - 1))
+    
+    def landed_on(self, player):
+        pass
 
-class Utility(Property):
-    def __init__(self, name, price, rent=25, house_cost=0, colour=None):
-        super().__init__(name, price, rent=25, house_cost=0, colour=None)
-
+class Utility(Tile_Ownable):
     def utility_rent(self, dice_total):
         if self.owner is None:
             return 0
         utilities_owned = sum(isinstance(p, Utility) for p in self.owner.properties)
         multiplier = 4 if utilities_owned == 1 else 10
         return dice_total * multiplier
+    
+    def landed_on(self, player):
+        pass
 
-# Anything under this is functional code 
+class Chance(Tile):
+    def landed_on(self, player):
+        pass
+
+class Community(Tile):
+    def landed_on(self, player):
+        pass
+
+class Go(Tile):
+    def landed_on(self, player):
+        pass
+
+class Jail(Tile):
+    def landed_on(self, player):
+        pass
+
+class Go_Jail(Tile):
+    def landed_on(self, player):
+        pass
+
+class Parking(Tile):
+    def landed_on(self, player):
+        pass
+
+class Tax(Tile):
+    def landed_on(self, player):
+        pass
 
 properties_list = [
     {"name": "Old Kent Road", "colour": "Brown", "price": 60, "rent": [2, 10, 30, 90, 160, 250], "house_cost": 50},
@@ -75,20 +117,23 @@ properties_list = [
     {"name": "Mayfair", "colour": "Dark Blue", "price": 400, "rent": [50, 200, 600, 1400, 1700, 2000], "house_cost": 200}
 ]
 properties_objects = []
-for property in properties_list:
-    properties_objects.append(Property(name=property["name"], price=property["price"], rent=property["rent"], house_cost=property["house_cost"], colour=property["colour"]))
-    
+for prop in properties_list:
+    properties_objects.append(Property(name=prop["name"], colour=prop["colour"], price=prop["price"], rent=prop["rent"], house_cost=prop["house_cost"]))
 
 utilities_list = [
     {"name": "Electric Company", "price": 150},
     {"name": "Water Works", "price": 150}
 ]
-utility_objects = []
-for utility in utilities_list:
-    utilities_objects.append(Utility(name=properties_list["name"], price=utilities_list["price"]))
+utilities_objects = []
+for util in utilities_list:
+    utilities_objects.append(Utility(name=util["name"], price=util["price"]))
+
 railroads_list = [
     {"name": "King's Cross Station", "price": 200},
     {"name": "Marylebone Station", "price": 200},
     {"name": "Fenchurch St Station", "price": 200},
     {"name": "Liverpool St Station", "price": 200}
 ]
+railroads_objects = []
+for rr in railroads_list:
+    railroads_objects.append(Railroad(name=rr["name"], price=rr["price"]))
