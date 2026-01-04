@@ -1,3 +1,5 @@
+import random
+
 class Player:
     def __init__(self, name): # Attributes for the player object
         self.name = name
@@ -13,10 +15,9 @@ class Bank:
         sender.money -= amount
         if receiver is not None:
             receiver.money += amount
-        
-    def is_bankrupt(self, player):
-        if player.money < 0:
-            player.bankruptcy = True
+        if sender.money < 0:
+            sender.bankruptcy = True
+
 
 class Tile:
     def __init__(self, name): # Highest class in the inheritance hirearchy, non ownable tiles can inherit from this
@@ -25,7 +26,7 @@ class Tile:
     def landed_on(self, player):
         pass
 
-class Tile_Ownable(Tile): # Inherits from tile and ownable tiles can inherit from this
+class Tile_Ownable(Tile):
     def __init__(self, name, price):
         super().__init__(name)
         self.price = price
@@ -33,12 +34,18 @@ class Tile_Ownable(Tile): # Inherits from tile and ownable tiles can inherit fro
     
     def landed_on(self, player):
         print(f"{player.name} has landed on {self.name}")
+        
         if self.owner is None:
-            buy = input(f"{self.name} is unowned. Would you like to buy it for {self.price}? (y/n)")
-            if buy == "y":
+            if player.money < self.price:
+                print(f"{player.name} cannot afford {self.name}.")
+                return
+            
+            buy = input(f"{self.name} is unowned. Buy for {self.price}? (y/n): ")
+            if buy.lower() == "y":
                 Bank.transaction(player, self.price)
                 self.owner = player
-                print(f"{player.name} has bought {self.name} for {self.price}!")
+                player.properties.append(self)
+                print(f"{player.name} has bought {self.name}!")
 
 
 class Property(Tile_Ownable): # Property, automatically inerhits owner and isn't needed to call it again
@@ -52,7 +59,7 @@ class Property(Tile_Ownable): # Property, automatically inerhits owner and isn't
     def landed_on(self, player):
         super().landed_on(player)
         if self.owner is not None and self.owner != player:
-            print(f"{player} has landed on the property of {self.owner}, therefore must pay them ${self.rent[self.house_number]}")
+            print(f"{player.name} has landed on the property of {self.owner.name}, therefore must pay them ${self.rent[self.house_number]}")
             Bank.transaction(player, self.rent[self.house_number], self.owner)
 
 class Railroad(Tile_Ownable): # No need for a __init__ function since it inherits everything it needs
@@ -60,13 +67,16 @@ class Railroad(Tile_Ownable): # No need for a __init__ function since it inherit
         if self.owner is None:
             return 0
         railroads_owned = sum(isinstance(p, Railroad) for p in self.owner.properties)
-        if railroads_owned == 0:
-            return 25
-        else:
-            return 25 * (2**(railroads_owned - 1))
+        return 25 * (2**(railroads_owned - 1))
+    
     
     def landed_on(self, player):
-        pass
+        super().landed_on(player)
+        rent = self.railroad_rent()
+        railroads_owned = sum(isinstance(p, Railroad) for p in self.owner.properties)
+        if self.owner is not None and self.owner != player:
+            print(f"{player.name} must pay rent of ${rent} to {self.owner.name}, who owns {railroads_owned} railroad(s) (1=25,2=50,3=100,4=200)")
+            Bank.transaction(player, rent, self.owner)
 
 class Utility(Tile_Ownable):
     def utility_rent(self, dice_total):
@@ -76,8 +86,12 @@ class Utility(Tile_Ownable):
         multiplier = 4 if utilities_owned == 1 else 10
         return dice_total * multiplier
     
-    def landed_on(self, player):
-        pass
+    def landed_on(self, player, dice_total):
+        super().landed_on(player)
+        rent = self.utility_rent(dice_total)
+        utilities_owned = sum(isinstance(p, Utility) for p in self.owner.properties)
+        if self.owner is not None and self.owner != player:
+            print(f"{player.name} must pay rent of ${rent} to {self.owner.name}, who owns {utilities_owned} utility(ies) (Rent = {dice_total} * {rent / dice_total})")
 
 class Chance(Tile):
     def __init__(self):
@@ -218,3 +232,71 @@ board = [
     Tax(name="Super Tax", amount=100),
     properties_objects[21]
 ]
+
+def dice_roll(player):
+    die_one = random.randint(1,6)
+    die_two = random.randint(1,6)
+    print(f"{player.name} rolled {die_one} and {die_two}! A total of {die_one + die_two}")
+    return [die_one, die_two, (die_one + die_two)]
+
+def turn(player, board):
+    dice_total = dice_roll(player)
+    if isinstance(board[player.position], Utility):
+        board[player.position].landed_on(player, dice_total)
+    else:
+        board[player.position].landed_on(player)
+
+
+def move_player(p, total=None, target_index=None, collect_go=False):
+    old_position = p.position
+    if target_index is None:
+        p.position = (p.position + total) % len(board)
+        if p.position < old_position:
+            print(f"{p.name} has passed Go! Collect $200")
+            p.money += 200
+        current_tile = board[p.position]
+        if isinstance(current_tile, Utility):
+            current_tile.landed_on(p, total or 0)
+        else:
+            current_tile.landed_on(p)
+    else:
+        p.position = target_index % len(board)
+        if collect_go and p.position < old_position:
+                print(f"{p.name} has passed Go! Collect $200")
+                p.money += 200
+
+        current_tile = board[p.position]
+        if isinstance(current_tile, Utility):
+            current_tile.landed_on(p, total)
+        else:
+            current_tile.landed_on(p)
+    
+utility_indexes = [12, 28]
+
+def nearest_utility(position):
+    for idx in utility_indexes:
+        if idx > position:
+            return idx
+    return utility_indexes[0]
+
+rr_indexes = [5, 15, 25, 35]
+
+def nearest_rr(position):
+    for idx in rr_indexes:
+        if idx > position:
+            return idx
+    return rr_indexes[0]    
+    
+
+def main():
+    player_num = int(input("How many players are there? "))
+    players = []
+    for x in range(player_num):
+        name = input(f"What is the name of player {x + 1}? ")
+        players.append(Player(name))
+    
+    while True:
+        for p in players:
+            die1, die2, total = dice_roll(p)
+            print(f"{p.name} has rolled {die1} and {die2}!")
+            move_player(p, total)
